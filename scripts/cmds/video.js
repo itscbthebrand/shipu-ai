@@ -1,4 +1,3 @@
-
 // 💮 video.js – 𝑨𝒏𝒊𝒎𝒆 𝒀𝒕 𝑽𝒊𝒅 𝑫𝒍
 // ➤ Match chat: video song-name or link
 // 🐇 Made with love by Chitron Bhattacharjee
@@ -24,10 +23,8 @@ module.exports = {
     description:      { en: "Search or download YouTube in anime style" },
     category: "media",
     guide: {
-  en: "🌸 𝙐𝙨𝙖𝙜𝙚:\n🎀 video Your Song Name\n🎀 video YouTube Link\n🩵 Then reply with a number to download"
-}
-
-
+      en: "🌸 𝙐𝙨𝙖𝙜𝙚:\n🎀 video Your Song Name\n🎀 video YouTube Link\n🩵 Then reply with a number to download"
+    }
   },
 
   onStart: async () => {},
@@ -50,7 +47,7 @@ module.exports = {
   download: async function (api, event, url, title = "unknown", time = "??:??") {
     try {
       const apiUrl = await baseApiUrl();
-      const res = await axios.get(\`\${apiUrl}/nazrul/ytMp4?url=\${encodeURIComponent(url)}\`);
+      const res = await axios.get(`${apiUrl}/nazrul/ytMp4?url=${encodeURIComponent(url)}`);
       if (!res.data?.d_url) throw new Error("No download link!");
 
       const filePath = path.join(__dirname, "animevid.mp4");
@@ -61,45 +58,41 @@ module.exports = {
       writer.on("finish", () => {
         api.sendMessage({
           body:
-\`🌸 𝙃𝙚𝙧𝙚'𝙨 𝙮𝙤𝙪𝙧 𝙘𝙪𝙩𝙚 𝙫𝙞𝙙𝙚𝙤 🍡
+`🌸 𝙃𝙚𝙧𝙚'𝙨 𝙮𝙤𝙪𝙧 𝙘𝙪𝙩𝙚 𝙫𝙞𝙙𝙚𝙤 🍡
 
-📀 𝑻𝒊𝒕𝒍𝒆: \${res.data.title}
-⏰ 𝑫𝒖𝒓𝒂𝒕𝒊𝒐𝒏: \${time}\`,
+📀 𝑻𝒊𝒕𝒍𝒆: ${res.data.title}
+⏰ 𝑫𝒖𝒓𝒂𝒕𝒊𝒐𝒏: ${time}`,
           attachment: fs.createReadStream(filePath)
         }, event.threadID, () => fs.unlinkSync(filePath), event.messageID);
       });
 
       writer.on("error", err => {
-        api.sendMessage(\`❌ Error: \${err.message}\`, event.threadID, event.messageID);
+        api.sendMessage(`❌ Error: ${err.message}`, event.threadID, event.messageID);
       });
 
     } catch (e) {
-      api.sendMessage(\`❌ \${e.message}\`, event.threadID, event.messageID);
+      api.sendMessage(`❌ ${e.message}`, event.threadID, event.messageID);
     }
   },
 
   search: async function (api, event, query) {
     try {
       const apiUrl = await baseApiUrl();
-      const res = await axios.get(\`\${apiUrl}/nazrul/ytSearch?query=\${encodeURIComponent(query)}\`);
+      const res = await axios.get(`${apiUrl}/nazrul/ytSearch?query=${encodeURIComponent(query)}`);
       const list = res.data;
 
       if (!list || list.length === 0)
         return api.sendMessage("❌ 𝙉𝙤 𝙫𝙞𝙙𝙨 𝙛𝙤𝙪𝙣𝙙!", event.threadID, event.messageID);
 
-      let msg = \`🌟 𝙏𝙤𝙥 10 𝙖𝙣𝙞𝙢𝙚-𝙨𝙩𝙮𝙡𝙚 𝙧𝙚𝙨𝙪𝙡𝙩𝙨:
-
-\`;
+      let msg = `🌟 𝙏𝙤𝙥 10 𝙖𝙣𝙞𝙢𝙚-𝙨𝙩𝙮𝙡𝙚 𝙧𝙚𝙨𝙪𝙡𝙩𝙨:\n\n`;
       const paths = [], attachments = [];
 
       for (let i = 0; i < Math.min(10, list.length); i++) {
         const vid = list[i];
-        msg += \`🍓 #\${i + 1}: \${vid.title}
-⏳ \${vid.timestamp}
+        msg += `🍓 #${i + 1}: ${vid.title}
+⏳ ${vid.timestamp}\n\n`;
 
-\`;
-
-        const imgPath = path.join(__dirname, \`thumb_\${i}.jpg\`);
+        const imgPath = path.join(__dirname, `thumb_${i}.jpg`);
         const stream = (await axios.get(vid.thumbnail, { responseType: "stream" })).data;
         await new Promise(resolve => stream.pipe(fs.createWriteStream(imgPath)).on("finish", resolve));
 
@@ -121,7 +114,7 @@ module.exports = {
       }, event.messageID);
 
     } catch (e) {
-      api.sendMessage(\`❌ \${e.message}\`, event.threadID, event.messageID);
+      api.sendMessage(`❌ ${e.message}`, event.threadID, event.messageID);
     }
   },
 
