@@ -42,11 +42,12 @@ module.exports = {
     return module.exports.handle({ message, args, getLang });
   },
 
-  onChat: async function ({ message, event, args, getLang }) {
+  onChat: async function ({ message, event, getLang }) {
     const content = (event.body || "").trim().toLowerCase();
     if (!content.startsWith("cmdlist")) return;
-    const args = content.split(/\s+/).slice(1);
-    return module.exports.handle({ message, args, getLang });
+
+    const splitArgs = content.split(/\s+/).slice(1);
+    return module.exports.handle({ message, args: splitArgs, getLang });
   },
 
   handle: async function ({ message, args, getLang }) {
