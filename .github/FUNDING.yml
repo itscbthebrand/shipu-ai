@@ -1,0 +1,74 @@
+# 💖 Funding & Sponsorship
+
+> **Note:** The [`FUNDING.yml`](.github/FUNDING.yml) file in this repository does not currently contain any active funding links. All fields are placeholders. To enable the GitHub Sponsor button, at least one platform entry must be filled in.
+
+---
+
+## What is FUNDING.yml?
+
+GitHub reads `.github/FUNDING.yml` and renders a **Sponsor this project** button at the top of your repository. It supports a wide range of funding platforms so maintainers can receive support however works best for them.
+
+---
+
+## Supported Platforms
+
+| Platform | Key | Example Value |
+|---|---|---|
+| [GitHub Sponsors](https://github.com/sponsors) | `github` | `[user1, user2]` (up to 4) |
+| [Patreon](https://www.patreon.com) | `patreon` | `username` |
+| [Open Collective](https://opencollective.com) | `open_collective` | `project-name` |
+| [Ko-fi](https://ko-fi.com) | `ko_fi` | `username` |
+| [Tidelift](https://tidelift.com) | `tidelift` | `platform/package` |
+| [Community Bridge](https://crowdfunding.lfx.linuxfoundation.org) | `community_bridge` | `project-name` |
+| [Liberapay](https://liberapay.com) | `liberapay` | `username` |
+| [IssueHunt](https://issuehunt.io) | `issuehunt` | `username` |
+| [LFX Crowdfunding](https://crowdfunding.lfx.linuxfoundation.org) | `lfx_crowdfunding` | `project-name` |
+| [Polar](https://polar.sh) | `polar` | `username` |
+| [Buy Me a Coffee](https://www.buymeacoffee.com) | `buy_me_a_coffee` | `username` |
+| [thanks.dev](https://thanks.dev) | `thanks_dev` | `username` |
+| Custom URL | `custom` | `['https://...']` (up to 4) |
+
+---
+
+## Setup
+
+1. Create a `.github` directory in the root of your repository if one does not already exist.
+
+2. Add a `FUNDING.yml` file inside it:
+
+```
+your-repo/
+└── .github/
+    └── FUNDING.yml
+```
+
+3. Fill in only the platforms you use. Leave everything else commented out or remove it entirely. Example:
+
+```yaml
+github: [your-username]
+ko_fi: your-username
+custom: ['https://your-website.com/donate']
+```
+
+4. Push to your default branch. GitHub will automatically detect the file and display the **Sponsor** button on your repository page.
+
+---
+
+## Notes
+
+- You do **not** need to fill in every field. Only uncomment the platforms you actively use.
+- The `github` and `custom` keys accept **up to 4 values** as a YAML list. All other keys accept a single value.
+- The Sponsor button only appears on **public repositories**.
+- Changes may take a few minutes to appear after pushing.
+
+---
+
+## Contributing
+
+If you find an issue or want to suggest an improvement, feel free to open an issue or submit a pull request. Contributions are welcome.
+
+---
+
+## License
+
+This project is open source and available under the [MIT License](LICENSE).
