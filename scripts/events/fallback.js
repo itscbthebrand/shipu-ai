@@ -1,117 +1,145 @@
 const leven = require("leven");
 
+// Helper to convert to serif unicode font
+function toSerifFont(text) {
+	const normal = "abcdefghijklmnopqrstuvwxyz0123456789";
+	const serif = "𝒂𝒃𝒄𝒅𝒆𝒇𝒈𝒉𝒊𝒋𝒌𝒍𝒎𝒏𝒐𝒑𝒒𝒓𝒔𝒕𝒖𝒗𝒘𝒙𝒚𝒛𝟎𝟏𝟐𝟑𝟒𝟓𝟔𝟕𝟖𝟗";
+	return text
+		.toLowerCase()
+		.split("")
+		.map(c => {
+			const i = normal.indexOf(c);
+			return i >= 0 ? serif[i] : c;
+		})
+		.join("");
+}
+
+// Percentage match helper
+function similarity(str1, str2) {
+	const maxLen = Math.max(str1.length, str2.length);
+	const dist = leven(str1, str2);
+	return ((maxLen - dist) / maxLen) * 100;
+}
+
 module.exports = {
 	config: {
 		name: "fallback",
-		version: "1.0",
+		version: "2.1",
 		author: "Chitron Bhattacharjee",
 		category: "system",
 		role: 0
 	},
 
-	onChat: async function ({ message, event, api, commandName, usersData, threadsData, globalData }) {
-		// Extract message text, assume prefix is '+'
+	onChat: async function ({ message, event, api }) {
 		const prefix = "+";
-		if (!event.body || !event.body.startsWith(prefix)) return;
+		if (!event.body?.startsWith(prefix)) return;
 
 		const args = event.body.slice(prefix.length).trim().split(/\s+/);
 		const inputCmd = args[0].toLowerCase();
 
-		// Get all commands from global.GoatBot.commands
 		const commands = [...global.GoatBot.commands.values()];
+		const cmdNames = [];
 
-		// Check if command exists exactly (name or alias)
-		const exactCmd = commands.find(cmd => {
-			if (cmd.config.name.toLowerCase() === inputCmd) return true;
-			if (cmd.config.aliases && cmd.config.aliases.some(a => a.toLowerCase() === inputCmd)) return true;
-			return false;
-		});
-
-		if (exactCmd) return; // Command exists, no fallback needed
-
-		// Find closest command by leven distance (threshold 3)
-		let closest = null;
-		let minDistance = 999;
 		for (const cmd of commands) {
-			const names = [cmd.config.name.toLowerCase()];
-			if (cmd.config.aliases) names.push(...cmd.config.aliases.map(a => a.toLowerCase()));
-			for (const name of names) {
-				const dist = leven(inputCmd, name);
-				if (dist < minDistance) {
-					minDistance = dist;
-					closest = cmd;
-				}
+			cmdNames.push({ name: cmd.config.name, cmd });
+			if (cmd.config.aliases) {
+				for (const alias of cmd.config.aliases)
+					cmdNames.push({ name: alias, cmd });
 			}
 		}
 
-		if (!closest || minDistance > 3) return; // No close command found
+		const exactMatch = cmdNames.find(c => c.name === inputCmd);
+		if (exactMatch) return;
 
-		// Send suggestion message
-		const suggestMsg = await api.sendMessage(
-			`❌ Command "${inputCmd}" not found.\n🔎 Did you mean "${closest.config.name}"?\n\nReply to this message with "yes" to run it!`,
-			event.threadID,
-			(event.messageID)
-		);
+		const suggestions = cmdNames
+			.map(({ name, cmd }) => {
+				return {
+					name,
+					cmd,
+					score: similarity(inputCmd, name)
+				};
+			})
+			.filter(s => s.score >= 90)
+			.sort((a, b) => b.score - a.score)
+			.slice(0, 3);
 
-		// Store suggestion for reply check
+		if (!suggestions.length) return;
+
+		let suggestText = `❌ ${toSerifFont("Command")} "${toSerifFont(inputCmd)}" ${toSerifFont("not found.")}\n`;
+		suggestText += `🔍 ${toSerifFont("Did you mean")}:\n\n`;
+
+		const emojiNums = ["➊", "➋", "➌"];
+		suggestions.forEach((s, i) => {
+			suggestText += `${emojiNums[i]} ${toSerifFont(s.name)}\n`;
+		});
+
+		suggestText += `\n💬 ${toSerifFont("Reply with")} 1, 2, or 3 ${toSerifFont("to run one.")}`;
+
+		const suggestMsg = await api.sendMessage(suggestText, event.threadID, event.messageID);
+
 		global.GoatBot.onReply.set(suggestMsg.messageID, {
-			commandName: closest.config.name,
-			args: args.slice(1),
+			type: "fallback-suggest",
+			suggestions,
 			threadID: event.threadID,
 			userID: event.senderID,
-			originalInput: inputCmd
+			originalInput: inputCmd,
+			args: args.slice(1),
+			messageID: suggestMsg.messageID
 		});
 	},
 
-	onReply: async function ({ event, api, message, Reply, usersData, threadsData, globalData }) {
-		const { messageID, args, commandName, userID, threadID } = Reply;
+	onReply: async function ({ event, api, Reply, message }) {
+		const { type, suggestions, userID, threadID, args, messageID } = Reply;
 
-		// Only allow original user to confirm
-		if (event.senderID !== userID) return;
+		if (type !== "fallback-suggest" || event.senderID !== userID) return;
 
-		const replyText = event.body?.toLowerCase().trim();
-		if (replyText !== "yes") return; // Only act on reply "yes"
+		// Accept normal digits "1","2","3" as reply
+		const validReplies = ["1", "2", "3"];
+		const index = validReplies.indexOf(event.body.trim());
+		if (index === -1 || !suggestions[index]) return;
 
-		// Run the suggested command
-		const cmd = global.GoatBot.commands.get(commandName);
-		if (!cmd) return;
+		const cmd = suggestions[index].cmd;
+		const cmdName = cmd?.config?.name || "unknown";
 
-		// Prepare fake context for command execution
-		// We run onStart with updated args and event
+		if (!cmd || typeof cmd.onStart !== "function") {
+			await api.sendMessage(`⚠️ ${toSerifFont("Sorry, the command")} "${toSerifFont(cmdName)}" ${toSerifFont("can't be executed like this.")}`, threadID);
+			return;
+		}
 
-		// Clone event and override body and args for the suggested command
 		const newEvent = { ...event };
-		newEvent.body = "+" + commandName + " " + (args.join(" ") || "");
+		newEvent.body = "+" + cmdName + " " + args.join(" ");
 		newEvent.senderID = userID;
 		newEvent.threadID = threadID;
 
-		// Prepare context object
 		const context = {
 			api,
 			args,
 			event: newEvent,
 			message,
-			usersData,
-			threadsData,
-			globalData,
-			commandName,
-			getLang: (key) => cmd.langs?.en?.[key] || key // fallback to English lang strings if available
+			usersData: global.usersData,
+			threadsData: global.threadsData,
+			globalData: global.globalData,
+			commandName: cmdName,
+			getLang: key => cmd.langs?.en?.[key] || key
 		};
 
 		try {
 			await cmd.onStart(context);
 		} catch (e) {
-			console.error("Error running fallback command:", e);
-			return api.sendMessage("❌ Error running the suggested command.", threadID);
+			console.error("❌ Error running fallback:", e);
+			await api.sendMessage("⚠️ An error occurred while running the command.", threadID);
+			return;
 		}
 
-		// Delete the suggestion message and confirmation reply to keep chat clean
 		try {
 			await api.unsendMessage(messageID);
 			await api.unsendMessage(event.messageID);
 		} catch {}
 
-		// Optionally, send a confirmation
-		await api.sendMessage(`✅ Command "${commandName}" executed as requested.`, threadID);
+		await api.sendMessage(`✅ ${toSerifFont("Command")} "${toSerifFont(cmdName)}" ${toSerifFont("executed!")}`, threadID);
+	},
+
+	onStart: async function () {
+		// Dummy to avoid load error. Real logic runs in onChat/onReply
 	}
 };
